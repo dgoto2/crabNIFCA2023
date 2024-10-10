@@ -1,9 +1,7 @@
 # script for data cleaning after the initial check for observer & quayside datasets - Northumberland IFCA 
-# created: 6/10/2024 by Daisuke Goto (d.goto@bangor.ac.uk)
 
 # check if required packages are installed
-required <- c("readr", "dplyr", "lubridate", "tidyr", "RColorBrewer", "rgdal", "sp", 
-              "rnaturalearth", "ggplot2", "ggridges")
+required <- c("readr", "dplyr", "lubridate", "tidyr", "RColorBrewer", "rgdal", "sp", "rnaturalearth", "ggplot2", "ggridges")
 installed <- rownames(installed.packages())
 (not_installed <- required[!required %in% installed])
 install.packages(not_installed, dependencies=TRUE)
@@ -41,38 +39,21 @@ observer_data_offshore <- readr::read_csv("processed_data/nifca/observer_data_of
                 Distance_to_shore = distance_to_shore) |>
   dplyr::glimpse()
 
-# (exploratory) use number of pots on fleet for number of pots samples if missing
-#observer_data_offshore <- observer_data_offshore |> 
-#  dplyr::mutate(num_pots_sampled = dplyr::case_when(is.na(num_pots_sampled) ~ num_pots_per_fleet,
-#                                             !is.na(num_pots_sampled) ~ num_pots_sampled))
-# ***number of pot data is available for the fleet observer dataset***
-
 # subset by species
-observer_data_fleet_lobster <- observer_data_fleet |> 
-  dplyr::filter(species=="Lobster") |> 
-  dplyr::glimpse()
 observer_data_fleet_crab <- observer_data_fleet |> 
   dplyr::filter(species=="Crab") |> 
-  dplyr::glimpse()
-observer_data_offshore_lobster <- observer_data_offshore |> 
-  dplyr::filter(species=="Lobster") |> 
   dplyr::glimpse()
 observer_data_offshore_crab <- observer_data_offshore |> 
   dplyr::filter(species=="Crab") |> 
   dplyr::glimpse()
 
 # compute mass (the same equations used for the welsh stocks)
-observer_data_fleet_lobster <- observer_data_fleet_lobster |> 
-  dplyr::mutate(sample_mass_kg = 4.36E-07*carapace_width^3.10753)
-observer_data_offshore_lobster <- observer_data_offshore_lobster |> 
-  dplyr::mutate(sample_mass_kg = 4.36E-07*carapace_width^3.10753)
 observer_data_fleet_crab <- observer_data_fleet_crab |> 
   dplyr::mutate(sample_mass_kg = dplyr::case_when(sex == 0 ~ 0.0002*carapace_width^3.03/1000,  
                                                   sex == 1 ~ 0.0002*carapace_width^2.94/1000))
 observer_data_offshore_crab <- observer_data_offshore_crab |> 
   dplyr::mutate(sample_mass_kg = dplyr::case_when(sex == 0 ~ 0.0002*carapace_width^3.03/1000, 
                                                   sex == 1 ~ 0.0002*carapace_width^2.94/1000))
-
 
 # function to compute nominal catch, landings, cpue, and lpue per fishing trip 
 compute_cpue.lpue <- function(data) {
@@ -180,9 +161,7 @@ compute_cpue.lpue <- function(data) {
 }
 
 # apply the function to each stock
-observer_data_fleet_lobster_out <- compute_cpue.lpue(observer_data_fleet_lobster) # lobster
 observer_data_fleet_crab_out <- compute_cpue.lpue(observer_data_fleet_crab) # crab
-observer_data_offshore_lobster_out <- compute_cpue.lpue(observer_data_offshore_lobster) # lobster
 observer_data_offshore_crab_out <- compute_cpue.lpue(observer_data_offshore_crab) # crab
 
 # REPLACE landings and LPUE before OCTOER 2017 (IMPLEMENTAITON OF BANNING OF SUBLEGAL SIZED ANIMALS)
@@ -207,17 +186,10 @@ replace_landing <- function(data) {
   return(list(data[[1]], data[[2]]))
 }
 
-observer_data_fleet_lobster_out <- replace_landing(observer_data_fleet_lobster_out)
 observer_data_fleet_crab_out <- replace_landing(observer_data_fleet_crab_out)
-observer_data_offshore_lobster_out <- replace_landing(observer_data_offshore_lobster_out)
 observer_data_offshore_crab_out <- replace_landing(observer_data_offshore_crab_out)
 
 # # returns data per month, observer data per fishing trip
-# observer_data_fleet_lobster_out[[1]] <- observer_data_fleet_lobster_out[[1]] |> 
-#   dplyr::right_join(returns_data, by = c("vesselID" = "vessel_id", "year", "month", "qrt.yr", "month.yr" = "mon_year"))
-# observer_data_offshore <- observer_data_offshore |> 
-#   dplyr::right_join(returns_data, by = c("vesselID" = "vessel_id", "year", "month", "qrt.yr", "month.yr" = "mon_year"))
-
 returns_data_compact <- returns_data |>
   dplyr::group_by(vessel_id, year, month, sector, landing_port) |>
   dplyr::filter(nil_return == "No") |>
@@ -238,31 +210,21 @@ returns_data_compact <- returns_data |>
                  nominal.lpue_returns_crab = mean(nominal.lpue_returns_crab, na.rm = TRUE)
   )
 
-
 # export output as rds (as a list)
-readr::write_rds(observer_data_fleet_lobster_out, file = "processed_data/nifca/observer_data_fleet_lobster_nominal.cpue.rds") # lobster
 readr::write_rds(observer_data_fleet_crab_out, file = "processed_data/nifca/observer_data_fleet_crab_nominal.cpue.rds") # crab
-readr::write_rds(observer_data_offshore_lobster_out, file = "processed_data/nifca/observer_data_offshore_lobster_nominal.cpue.rds") # lobster
 readr::write_rds(observer_data_offshore_crab_out, file = "processed_data/nifca/observer_data_offshore_crab_nominal.cpue.rds") # crab
 
 # export output as csv
-readr::write_csv(observer_data_fleet_lobster_out[[1]], file = "processed_data/nifca/observer_data_fleet_lobster_nominal.cpue_trip.csv") 
 readr::write_csv(observer_data_fleet_crab_out[[1]], file = "processed_data/nifca/observer_data_fleet_crab_nominal.cpue_trip.csv")
-readr::write_csv(observer_data_fleet_lobster_out[[2]], file = "processed_data/nifca/observer_data_fleet_lobster_nominal.cpue_potset.csv") 
 readr::write_csv(observer_data_fleet_crab_out[[2]], file = "processed_data/nifca/observer_data_fleet_crab_nominal.cpue_potset.csv")
-
-readr::write_csv(observer_data_offshore_lobster_out[[1]], file = "processed_data/nifca/observer_data_offshore_lobster_nominal.cpue_trip.csv") 
 readr::write_csv(observer_data_offshore_crab_out[[1]], file = "processed_data/nifca/observer_data_offshore_crab_nominal.cpue_trip.csv")
-readr::write_csv(observer_data_offshore_lobster_out[[2]], file = "processed_data/nifca/observer_data_offshore_lobster_nominal.cpue_potset.csv") 
 readr::write_csv(observer_data_offshore_crab_out[[2]], file = "processed_data/nifca/observer_data_offshore_crab_nominal.cpue_potset.csv")
-
 readr::write_csv(returns_data_compact, file = "processed_data/nifca/returns_data_compact.csv")
-
 
 # plot output
 # temporal variation
 # select a dataset and a parameter
-data <- observer_data_fleet_lobster_out[[1]]
+data <- observer_data_fleet_crab_out[[1]]
 response <- data$nominal.cpue
 response.name <- "nominal catch rate (kg per number of pots hauled)"
 
@@ -303,7 +265,7 @@ ggplot2::ggsave(file=paste0("plots/nifca/", response.name, "_observer_trends_nif
 
 # spatial distribution
 # select a dataset and a parameter
-data <- observer_data_offshore_lobster_out[[2]]
+data <- observer_data_offshore_crab_out[[2]]
 response <- data$nominal.cpue_potset
 response.name <- "nominal cpue (kg per number of pots hauled)"
 
@@ -362,19 +324,14 @@ shp_ices.rec_nifca <- shp_ices.rec |>
   ggplot2::facet_wrap(~ year, strip.position = "top", ncol = 3))
 
 # export plot
-ggplot2::ggsave(file=paste0("plots/nifca/", response.name, "_observer_space_nifca.svg"), 
-                plot=plot2, width=12, height=8)
-
+ggplot2::ggsave(file=paste0("plots/nifca/", response.name, "_observer_space_nifca.svg"), plot=plot2, width=12, height=8)
 
 # size structure
 # select a dataset
-nominal.cpue_potset_no.na <- observer_data_fleet_lobster |> 
-  dplyr::filter(!is.na(sex))
 observer_data_crabb_no.na <- observer_data_offshore_crab |> 
   dplyr::filter(!is.na(sex))
 sex.label <- c("male", "female")
 names(sex.label) <- c(0, 1)
-
 ggplot2::ggplot(nominal.cpue_potset_no.na, 
                 ggplot2::aes(x = carapace_width, 
                              y = as.factor(year))) +
