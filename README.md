@@ -1,4 +1,4 @@
-### Northumberland crab stock assessment
+### Northumberland (England) crab stock assessment
 This repository contains code used for the 2023 stock assessment work (data processing and assessment model fitting using Stock Synthesis, SS3) for the Northumberland IFCA stock of edible crab (Cancer pagurus).
 
 #### File list
